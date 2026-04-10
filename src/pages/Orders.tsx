@@ -1,15 +1,18 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
-import { ClipboardList } from "lucide-react";
+import { ClipboardList, Printer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { printReceipt, useReceiptData } from "@/components/ReceiptPrint";
 
 export default function Orders() {
   const queryClient = useQueryClient();
+  const [printingOrderId, setPrintingOrderId] = useState<string | null>(null);
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ["orders"],
@@ -30,6 +33,15 @@ export default function Orders() {
     onSuccess: () => { toast.success("Status updated"); queryClient.invalidateQueries({ queryKey: ["orders"] }); },
     onError: (e) => toast.error(e.message),
   });
+
+  const handlePrint = async (orderId: string) => {
+    const { data: order } = await supabase.from("orders").select("*, customers(name, phone)").eq("id", orderId).single();
+    const { data: items } = await supabase.from("order_items").select("*, products(name)").eq("order_id", orderId);
+    const { data: settings } = await supabase.from("store_settings").select("key, value");
+    const store: Record<string, string> = {};
+    settings?.forEach((s: any) => { store[s.key] = s.value || ""; });
+    if (order) printReceipt(order, items || [], store);
+  };
 
   return (
     <div>
@@ -62,7 +74,10 @@ export default function Orders() {
                     <td className="p-3 text-right font-medium">৳{Number(o.total).toFixed(2)}</td>
                     <td className="p-3 hidden md:table-cell capitalize">{o.payment_method}</td>
                     <td className="p-3 hidden lg:table-cell text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</td>
-                    <td className="p-3 text-right">
+                    <td className="p-3 text-right flex items-center justify-end gap-1">
+                      <Button size="icon" variant="ghost" onClick={() => handlePrint(o.id)} title="Print Receipt">
+                        <Printer className="h-4 w-4" />
+                      </Button>
                       <Select value={o.status} onValueChange={(v) => updateStatus.mutate({ id: o.id, status: v })}>
                         <SelectTrigger className="w-28 h-8"><SelectValue /></SelectTrigger>
                         <SelectContent>

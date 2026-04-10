@@ -11,6 +11,8 @@ import {
   Pill,
   LogOut,
   UserCog,
+  PackagePlus,
+  BarChart3,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -35,6 +37,8 @@ const mainItems = [
   { title: "POS", url: "/pos", icon: ShoppingCart },
   { title: "Inventory", url: "/inventory", icon: Package },
   { title: "Orders", url: "/orders", icon: ClipboardList },
+  { title: "Purchase Orders", url: "/purchase-orders", icon: PackagePlus },
+  { title: "Reports", url: "/reports", icon: BarChart3 },
   { title: "Accounting", url: "/accounting", icon: DollarSign },
 ];
 
