@@ -1,26 +1,30 @@
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 
-interface PageHeaderProps {
+export interface PageHeaderProps {
   title: string;
   description?: string;
   actionLabel?: string;
   onAction?: () => void;
+  children?: React.ReactNode;
 }
 
-export function PageHeader({ title, description, actionLabel, onAction }: PageHeaderProps) {
+export function PageHeader({ title, description, actionLabel, onAction, children }: PageHeaderProps) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
       <div>
         <h1 className="text-2xl font-bold">{title}</h1>
         {description && <p className="text-muted-foreground text-sm mt-1">{description}</p>}
       </div>
-      {actionLabel && onAction && (
-        <Button onClick={onAction} className="shrink-0">
-          <Plus className="h-4 w-4 mr-2" />
-          {actionLabel}
-        </Button>
-      )}
+      <div className="flex items-center gap-2 shrink-0">
+        {actionLabel && onAction && (
+          <Button onClick={onAction} className="shrink-0">
+            <Plus className="h-4 w-4 mr-2" />
+            {actionLabel}
+          </Button>
+        )}
+        {children}
+      </div>
     </div>
   );
 }
