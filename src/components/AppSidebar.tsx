@@ -9,9 +9,13 @@ import {
   Tags,
   Settings,
   Pill,
+  LogOut,
+  UserCog,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
@@ -22,6 +26,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
+  SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
 
@@ -44,9 +49,14 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+  const { user, role, isSuperAdmin, signOut } = useAuth();
 
   const isActive = (path: string) =>
     path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
+
+  const adminItems = isSuperAdmin
+    ? [{ title: "Users", url: "/users", icon: UserCog }]
+    : [];
 
   return (
     <Sidebar collapsible="icon">
@@ -82,7 +92,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Management</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {managementItems.map((item) => (
+              {[...managementItems, ...adminItems].map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
                     <NavLink to={item.url}>
@@ -96,6 +106,23 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="p-3 border-t border-sidebar-border">
+        {!collapsed && user && (
+          <div className="mb-2 px-1">
+            <p className="text-xs text-sidebar-foreground truncate">{user.email}</p>
+            <p className="text-xs text-sidebar-foreground/60 capitalize">{role || "staff"}</p>
+          </div>
+        )}
+        <Button
+          variant="ghost"
+          size={collapsed ? "icon" : "sm"}
+          className="w-full text-sidebar-foreground hover:text-sidebar-primary-foreground hover:bg-sidebar-accent"
+          onClick={signOut}
+        >
+          <LogOut className="h-4 w-4" />
+          {!collapsed && <span className="ml-2">Sign Out</span>}
+        </Button>
+      </SidebarFooter>
     </Sidebar>
   );
 }
