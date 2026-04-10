@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
-import { Package, Pencil, Trash2, Upload } from "lucide-react";
+import { Package, Pencil, Trash2, Upload, QrCode, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,11 +11,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { QRCodeView } from "@/components/QRCodeView";
+import { QRScanner } from "@/components/QRScanner";
 
 export default function Inventory() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [search, setSearch] = useState("");
+  const [qrProduct, setQrProduct] = useState<any>(null);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: products, isLoading } = useQuery({
@@ -94,10 +99,35 @@ export default function Inventory() {
     onError: (e) => toast.error(e.message),
   });
 
+  const handleScan = (data: string) => {
+    try {
+      const parsed = JSON.parse(data);
+      if (parsed.id) {
+        const found = products?.find((p: any) => p.id === parsed.id);
+        if (found) {
+          openEdit(found);
+          toast.success(`Found: ${found.name}`);
+        } else {
+          setSearch(parsed.name || parsed.sku || "");
+          toast.info("Product not in current view, searching...");
+        }
+      }
+    } catch {
+      // Treat as barcode
+      setSearch(data);
+      toast.info(`Searching for: ${data}`);
+    }
+  };
+
   return (
     <div>
       <PageHeader title="Inventory" description="Manage your medicine stock" actionLabel="Add Product" onAction={() => { resetForm(); setOpen(true); }} />
-      <Input placeholder="Search products..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm mb-4" />
+      <div className="flex gap-2 mb-4">
+        <Input placeholder="Search products..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
+        <Button variant="outline" size="icon" onClick={() => setScanOpen(true)} title="Scan QR">
+          <ScanLine className="h-4 w-4" />
+        </Button>
+      </div>
 
       {isLoading ? (
         <p className="text-muted-foreground">Loading...</p>
@@ -138,6 +168,9 @@ export default function Inventory() {
                       )}
                     </td>
                     <td className="p-3 text-right">
+                      <Button size="icon" variant="ghost" onClick={() => { setQrProduct(p); setQrOpen(true); }} title="QR Code">
+                        <QrCode className="h-4 w-4" />
+                      </Button>
                       <Button size="icon" variant="ghost" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>
                       <Button size="icon" variant="ghost" className="text-destructive" onClick={() => deleteMutation.mutate(p.id)}><Trash2 className="h-4 w-4" /></Button>
                     </td>
@@ -203,6 +236,9 @@ export default function Inventory() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <QRCodeView open={qrOpen} onOpenChange={setQrOpen} product={qrProduct} />
+      <QRScanner open={scanOpen} onOpenChange={setScanOpen} onScan={handleScan} />
     </div>
   );
 }

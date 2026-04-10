@@ -16,6 +16,8 @@ import Suppliers from "./pages/Suppliers";
 import Categories from "./pages/Categories";
 import SettingsPage from "./pages/Settings";
 import UserManagement from "./pages/UserManagement";
+import PurchaseOrders from "./pages/PurchaseOrders";
+import Reports from "./pages/Reports";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
@@ -40,6 +42,8 @@ const App = () => (
                     <Route path="/pos" element={<POS />} />
                     <Route path="/inventory" element={<Inventory />} />
                     <Route path="/orders" element={<Orders />} />
+                    <Route path="/purchase-orders" element={<PurchaseOrders />} />
+                    <Route path="/reports" element={<Reports />} />
                     <Route path="/accounting" element={<Accounting />} />
                     <Route path="/customers" element={<Customers />} />
                     <Route path="/suppliers" element={<Suppliers />} />
