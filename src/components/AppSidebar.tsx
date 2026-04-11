@@ -17,6 +17,8 @@ import {
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
@@ -33,20 +35,20 @@ import {
 } from "@/components/ui/sidebar";
 
 const mainItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "POS", url: "/pos", icon: ShoppingCart },
-  { title: "Inventory", url: "/inventory", icon: Package },
-  { title: "Orders", url: "/orders", icon: ClipboardList },
-  { title: "Purchase Orders", url: "/purchase-orders", icon: PackagePlus },
-  { title: "Reports", url: "/reports", icon: BarChart3 },
-  { title: "Accounting", url: "/accounting", icon: DollarSign },
+  { title: "ড্যাশবোর্ড", url: "/", icon: LayoutDashboard },
+  { title: "POS বিক্রয়", url: "/pos", icon: ShoppingCart },
+  { title: "ইনভেন্টরি", url: "/inventory", icon: Package },
+  { title: "অর্ডার", url: "/orders", icon: ClipboardList },
+  { title: "ক্রয় আদেশ", url: "/purchase-orders", icon: PackagePlus },
+  { title: "রিপোর্ট", url: "/reports", icon: BarChart3 },
+  { title: "হিসাব", url: "/accounting", icon: DollarSign },
 ];
 
 const managementItems = [
-  { title: "Customers", url: "/customers", icon: Users },
-  { title: "Suppliers", url: "/suppliers", icon: Truck },
-  { title: "Categories", url: "/categories", icon: Tags },
-  { title: "Settings", url: "/settings", icon: Settings },
+  { title: "গ্রাহক", url: "/customers", icon: Users },
+  { title: "সরবরাহকারী", url: "/suppliers", icon: Truck },
+  { title: "ক্যাটাগরি", url: "/categories", icon: Tags },
+  { title: "সেটিংস", url: "/settings", icon: Settings },
 ];
 
 export function AppSidebar() {
@@ -55,11 +57,19 @@ export function AppSidebar() {
   const location = useLocation();
   const { user, role, isSuperAdmin, signOut } = useAuth();
 
+  const { data: storeName } = useQuery({
+    queryKey: ["store-name"],
+    queryFn: async () => {
+      const { data } = await supabase.from("store_settings").select("value").eq("key", "store_name").maybeSingle();
+      return data?.value || "MediShop";
+    },
+  });
+
   const isActive = (path: string) =>
     path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
 
   const adminItems = isSuperAdmin
-    ? [{ title: "Users", url: "/users", icon: UserCog }]
+    ? [{ title: "ব্যবহারকারী", url: "/users", icon: UserCog }]
     : [];
 
   return (
@@ -68,15 +78,15 @@ export function AppSidebar() {
         <div className="flex items-center gap-2">
           <Pill className="h-7 w-7 text-sidebar-primary shrink-0" />
           {!collapsed && (
-            <span className="font-bold text-lg text-sidebar-primary-foreground">
-              MediShop
+            <span className="font-bold text-lg text-sidebar-primary-foreground truncate">
+              {storeName || "MediShop"}
             </span>
           )}
         </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Main</SidebarGroupLabel>
+          <SidebarGroupLabel>প্রধান মেনু</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {mainItems.map((item) => (
@@ -93,7 +103,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
-          <SidebarGroupLabel>Management</SidebarGroupLabel>
+          <SidebarGroupLabel>ব্যবস্থাপনা</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {[...managementItems, ...adminItems].map((item) => (
@@ -114,7 +124,9 @@ export function AppSidebar() {
         {!collapsed && user && (
           <div className="mb-2 px-1">
             <p className="text-xs text-sidebar-foreground truncate">{user.email}</p>
-            <p className="text-xs text-sidebar-foreground/60 capitalize">{role || "staff"}</p>
+            <p className="text-xs text-sidebar-foreground/60 capitalize">
+              {role === "super_admin" ? "সুপার অ্যাডমিন" : role === "admin" ? "অ্যাডমিন" : "স্টাফ"}
+            </p>
           </div>
         )}
         <Button
@@ -124,7 +136,7 @@ export function AppSidebar() {
           onClick={signOut}
         >
           <LogOut className="h-4 w-4" />
-          {!collapsed && <span className="ml-2">Sign Out</span>}
+          {!collapsed && <span className="ml-2">লগ আউট</span>}
         </Button>
       </SidebarFooter>
     </Sidebar>

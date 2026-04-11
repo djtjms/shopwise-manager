@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { StatCard } from "@/components/StatCard";
-import { DollarSign, TrendingUp, TrendingDown, ArrowUpDown } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, ArrowUpDown, Download } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,13 +15,20 @@ import { toast } from "sonner";
 
 export default function Accounting() {
   const [open, setOpen] = useState(false);
+  const [filterType, setFilterType] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [form, setForm] = useState({ type: "income", category: "", amount: 0, description: "", payment_method: "cash", transaction_date: new Date().toISOString().split("T")[0] });
   const queryClient = useQueryClient();
 
   const { data: transactions } = useQuery({
-    queryKey: ["transactions"],
+    queryKey: ["transactions", filterType, dateFrom, dateTo],
     queryFn: async () => {
-      const { data } = await supabase.from("transactions").select("*").order("transaction_date", { ascending: false });
+      let q = supabase.from("transactions").select("*").order("transaction_date", { ascending: false });
+      if (filterType !== "all") q = q.eq("type", filterType);
+      if (dateFrom) q = q.gte("transaction_date", dateFrom);
+      if (dateTo) q = q.lte("transaction_date", dateTo);
+      const { data } = await q;
       return data || [];
     },
   });
@@ -35,7 +42,7 @@ export default function Accounting() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Transaction added");
+      toast.success("লেনদেন যোগ হয়েছে");
       setOpen(false);
       setForm({ type: "income", category: "", amount: 0, description: "", payment_method: "cash", transaction_date: new Date().toISOString().split("T")[0] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
@@ -43,13 +50,32 @@ export default function Accounting() {
     onError: (e) => toast.error(e.message),
   });
 
+  const categories = {
+    income: ["Sales", "Returns", "Other Income"],
+    expense: ["Purchase", "Rent", "Utilities", "Salary", "Transport", "Other Expense"],
+  };
+
   return (
     <div>
-      <PageHeader title="Accounting" description="Track income and expenses" actionLabel="Add Transaction" onAction={() => setOpen(true)} />
+      <PageHeader title="হিসাব (Accounting)" description="আয় ও ব্যয় ট্র্যাক করুন" actionLabel="লেনদেন যোগ করুন" onAction={() => setOpen(true)} />
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <StatCard title="Total Income" value={`৳${totalIncome.toFixed(2)}`} icon={TrendingUp} />
-        <StatCard title="Total Expense" value={`৳${totalExpense.toFixed(2)}`} icon={TrendingDown} />
-        <StatCard title="Net Profit" value={`৳${(totalIncome - totalExpense).toFixed(2)}`} icon={DollarSign} />
+        <StatCard title="মোট আয়" value={`৳${totalIncome.toFixed(2)}`} icon={TrendingUp} />
+        <StatCard title="মোট ব্যয়" value={`৳${totalExpense.toFixed(2)}`} icon={TrendingDown} />
+        <StatCard title="নিট মুনাফা" value={`৳${(totalIncome - totalExpense).toFixed(2)}`} icon={DollarSign} className={(totalIncome - totalExpense) < 0 ? "border-destructive/30" : "border-primary/30"} />
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <Select value={filterType} onValueChange={setFilterType}>
+          <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">সব</SelectItem>
+            <SelectItem value="income">আয়</SelectItem>
+            <SelectItem value="expense">ব্যয়</SelectItem>
+          </SelectContent>
+        </Select>
+        <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-40" placeholder="From" />
+        <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-40" placeholder="To" />
       </div>
 
       {transactions && transactions.length > 0 ? (
@@ -58,19 +84,19 @@ export default function Accounting() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="text-left p-3 font-medium">Date</th>
-                  <th className="text-left p-3 font-medium">Type</th>
-                  <th className="text-left p-3 font-medium">Category</th>
-                  <th className="text-left p-3 font-medium hidden sm:table-cell">Description</th>
-                  <th className="text-left p-3 font-medium hidden md:table-cell">Payment</th>
-                  <th className="text-right p-3 font-medium">Amount</th>
+                  <th className="text-left p-3 font-medium">তারিখ</th>
+                  <th className="text-left p-3 font-medium">ধরন</th>
+                  <th className="text-left p-3 font-medium">ক্যাটাগরি</th>
+                  <th className="text-left p-3 font-medium hidden sm:table-cell">বিবরণ</th>
+                  <th className="text-left p-3 font-medium hidden md:table-cell">পেমেন্ট</th>
+                  <th className="text-right p-3 font-medium">পরিমাণ</th>
                 </tr>
               </thead>
               <tbody>
                 {transactions.map((t) => (
                   <tr key={t.id} className="border-b last:border-0 hover:bg-muted/30">
-                    <td className="p-3">{new Date(t.transaction_date).toLocaleDateString()}</td>
-                    <td className="p-3"><Badge variant={t.type === "income" ? "default" : "destructive"}>{t.type}</Badge></td>
+                    <td className="p-3">{new Date(t.transaction_date).toLocaleDateString("bn-BD")}</td>
+                    <td className="p-3"><Badge variant={t.type === "income" ? "default" : "destructive"}>{t.type === "income" ? "আয়" : "ব্যয়"}</Badge></td>
                     <td className="p-3">{t.category}</td>
                     <td className="p-3 hidden sm:table-cell text-muted-foreground">{t.description || "—"}</td>
                     <td className="p-3 hidden md:table-cell capitalize">{t.payment_method}</td>
@@ -84,40 +110,52 @@ export default function Accounting() {
           </div>
         </div>
       ) : (
-        <EmptyState icon={ArrowUpDown} title="No transactions yet" description="Add transactions or they'll be auto-created from POS sales." />
+        <EmptyState icon={ArrowUpDown} title="কোন লেনদেন নেই" description="লেনদেন যোগ করুন অথবা POS থেকে বিক্রয় করলে স্বয়ংক্রিয়ভাবে তৈরি হবে।" />
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Add Transaction</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>লেনদেন যোগ করুন</DialogTitle></DialogHeader>
           <div className="grid gap-4">
             <div>
-              <Label>Type</Label>
-              <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
+              <Label>ধরন (Type)</Label>
+              <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v, category: "" })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="income">Income</SelectItem>
-                  <SelectItem value="expense">Expense</SelectItem>
+                  <SelectItem value="income">আয় (Income)</SelectItem>
+                  <SelectItem value="expense">ব্যয় (Expense)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div><Label>Category *</Label><Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="e.g. Sales, Rent, Utilities" /></div>
-            <div><Label>Amount *</Label><Input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })} /></div>
-            <div><Label>Description</Label><Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
-            <div><Label>Date</Label><Input type="date" value={form.transaction_date} onChange={(e) => setForm({ ...form, transaction_date: e.target.value })} /></div>
             <div>
-              <Label>Payment Method</Label>
+              <Label>ক্যাটাগরি *</Label>
+              <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
+                <SelectTrigger><SelectValue placeholder="নির্বাচন করুন" /></SelectTrigger>
+                <SelectContent>
+                  {categories[form.type as "income" | "expense"].map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div><Label>পরিমাণ (৳) *</Label><Input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })} /></div>
+            <div><Label>বিবরণ</Label><Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
+            <div><Label>তারিখ</Label><Input type="date" value={form.transaction_date} onChange={(e) => setForm({ ...form, transaction_date: e.target.value })} /></div>
+            <div>
+              <Label>পেমেন্ট পদ্ধতি</Label>
               <Select value={form.payment_method} onValueChange={(v) => setForm({ ...form, payment_method: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="card">Card</SelectItem>
-                  <SelectItem value="mobile">Mobile</SelectItem>
+                  <SelectItem value="cash">নগদ</SelectItem>
+                  <SelectItem value="card">কার্ড</SelectItem>
+                  <SelectItem value="bkash">বিকাশ</SelectItem>
+                  <SelectItem value="nagad">নগদ (Nagad)</SelectItem>
+                  <SelectItem value="rocket">রকেট</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <Button onClick={() => saveMutation.mutate()} disabled={!form.category || !form.amount || saveMutation.isPending}>
-              {saveMutation.isPending ? "Saving..." : "Add Transaction"}
+              {saveMutation.isPending ? "সংরক্ষণ হচ্ছে..." : "লেনদেন যোগ করুন"}
             </Button>
           </div>
         </DialogContent>

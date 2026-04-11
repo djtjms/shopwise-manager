@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Settings as SettingsIcon, Upload, Store } from "lucide-react";
+import { Upload, Store, FileText, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
@@ -23,14 +25,9 @@ export default function SettingsPage() {
   });
 
   const [form, setForm] = useState({
-    store_name: "",
-    store_tagline: "",
-    store_phone: "",
-    store_email: "",
-    store_address: "",
-    store_logo: "",
-    currency_symbol: "৳",
-    receipt_footer: "",
+    store_name: "", store_tagline: "", store_phone: "", store_email: "",
+    store_address: "", store_logo: "", currency_symbol: "৳",
+    receipt_footer: "", drug_license_no: "",
   });
 
   useEffect(() => {
@@ -44,6 +41,7 @@ export default function SettingsPage() {
         store_logo: settings.store_logo || "",
         currency_symbol: settings.currency_symbol || "৳",
         receipt_footer: settings.receipt_footer || "",
+        drug_license_no: settings.drug_license_no || "",
       });
     }
   }, [settings]);
@@ -65,8 +63,7 @@ export default function SettingsPage() {
       for (const [key, value] of Object.entries(form)) {
         const { error } = await supabase
           .from("store_settings")
-          .update({ value })
-          .eq("key", key);
+          .upsert({ key, value }, { onConflict: "key" });
         if (error) throw error;
       }
     },
@@ -83,52 +80,69 @@ export default function SettingsPage() {
     <div>
       <h1 className="text-2xl font-bold mb-6">Settings</h1>
 
-      <div className="bg-card rounded-xl border p-6 max-w-2xl space-y-6">
-        <div className="flex items-center gap-3 mb-2">
-          <Store className="h-5 w-5 text-muted-foreground" />
-          <h2 className="font-semibold">Store Branding</h2>
-        </div>
+      <div className="max-w-3xl">
+        <Tabs defaultValue="branding">
+          <TabsList className="mb-4">
+            <TabsTrigger value="branding"><Store className="h-4 w-4 mr-1" />Store Branding</TabsTrigger>
+            <TabsTrigger value="receipt"><FileText className="h-4 w-4 mr-1" />Receipt</TabsTrigger>
+            <TabsTrigger value="license"><Globe className="h-4 w-4 mr-1" />License & Legal</TabsTrigger>
+          </TabsList>
 
-        {!isSuperAdmin && (
-          <p className="text-sm text-muted-foreground">Only super admins can modify store settings.</p>
-        )}
+          {!isSuperAdmin && (
+            <p className="text-sm text-muted-foreground mb-4">Only super admins can modify store settings.</p>
+          )}
 
-        <div className="grid gap-4">
-          <div>
-            <Label>Store Logo</Label>
-            <div className="flex items-center gap-4 mt-1">
-              {form.store_logo && <img src={form.store_logo} alt="Logo" className="h-16 w-16 rounded object-contain border" />}
-              {isSuperAdmin && (
-                <label className="cursor-pointer">
-                  <div className="flex items-center gap-2 px-3 py-2 border rounded-md text-sm hover:bg-muted">
-                    <Upload className="h-4 w-4" /> Upload Logo
-                  </div>
-                  <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
-                </label>
-              )}
+          <TabsContent value="branding">
+            <div className="bg-card rounded-xl border p-6 space-y-4">
+              <div>
+                <Label>Store Logo</Label>
+                <div className="flex items-center gap-4 mt-1">
+                  {form.store_logo && <img src={form.store_logo} alt="Logo" className="h-20 w-20 rounded-lg object-contain border p-1" />}
+                  {isSuperAdmin && (
+                    <label className="cursor-pointer">
+                      <div className="flex items-center gap-2 px-3 py-2 border rounded-md text-sm hover:bg-muted">
+                        <Upload className="h-4 w-4" /> Upload Logo
+                      </div>
+                      <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                    </label>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div><Label>Store Name (দোকানের নাম)</Label><Input value={form.store_name} onChange={(e) => set("store_name", e.target.value)} disabled={!isSuperAdmin} /></div>
+                <div><Label>Tagline (ট্যাগলাইন)</Label><Input value={form.store_tagline} onChange={(e) => set("store_tagline", e.target.value)} disabled={!isSuperAdmin} /></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div><Label>Phone (ফোন)</Label><Input value={form.store_phone} onChange={(e) => set("store_phone", e.target.value)} disabled={!isSuperAdmin} placeholder="+880-XXXX-XXXXXX" /></div>
+                <div><Label>Email (ইমেইল)</Label><Input value={form.store_email} onChange={(e) => set("store_email", e.target.value)} disabled={!isSuperAdmin} /></div>
+              </div>
+              <div><Label>Address (ঠিকানা)</Label><Textarea value={form.store_address} onChange={(e) => set("store_address", e.target.value)} disabled={!isSuperAdmin} rows={2} /></div>
+              <div><Label>Currency Symbol (মুদ্রা চিহ্ন)</Label><Input value={form.currency_symbol} onChange={(e) => set("currency_symbol", e.target.value)} disabled={!isSuperAdmin} className="w-24" /></div>
             </div>
-          </div>
+          </TabsContent>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div><Label>Store Name</Label><Input value={form.store_name} onChange={(e) => set("store_name", e.target.value)} disabled={!isSuperAdmin} /></div>
-            <div><Label>Tagline</Label><Input value={form.store_tagline} onChange={(e) => set("store_tagline", e.target.value)} disabled={!isSuperAdmin} /></div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div><Label>Phone</Label><Input value={form.store_phone} onChange={(e) => set("store_phone", e.target.value)} disabled={!isSuperAdmin} /></div>
-            <div><Label>Email</Label><Input value={form.store_email} onChange={(e) => set("store_email", e.target.value)} disabled={!isSuperAdmin} /></div>
-          </div>
-          <div><Label>Address</Label><Input value={form.store_address} onChange={(e) => set("store_address", e.target.value)} disabled={!isSuperAdmin} /></div>
-          <div className="grid grid-cols-2 gap-4">
-            <div><Label>Currency Symbol</Label><Input value={form.currency_symbol} onChange={(e) => set("currency_symbol", e.target.value)} disabled={!isSuperAdmin} /></div>
-            <div><Label>Receipt Footer</Label><Input value={form.receipt_footer} onChange={(e) => set("receipt_footer", e.target.value)} disabled={!isSuperAdmin} /></div>
-          </div>
+          <TabsContent value="receipt">
+            <div className="bg-card rounded-xl border p-6 space-y-4">
+              <p className="text-sm text-muted-foreground">Customize what appears on printed receipts.</p>
+              <div><Label>Receipt Footer Message</Label><Textarea value={form.receipt_footer} onChange={(e) => set("receipt_footer", e.target.value)} disabled={!isSuperAdmin} rows={2} placeholder="ধন্যবাদ! আবার আসবেন।" /></div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="license">
+            <div className="bg-card rounded-xl border p-6 space-y-4">
+              <p className="text-sm text-muted-foreground">Bangladesh DGDA drug license information for compliance.</p>
+              <div><Label>Drug License No. (ড্রাগ লাইসেন্স নম্বর)</Label><Input value={form.drug_license_no} onChange={(e) => set("drug_license_no", e.target.value)} disabled={!isSuperAdmin} placeholder="e.g. DL-XXXX-XXXXX" /></div>
+            </div>
+          </TabsContent>
 
           {isSuperAdmin && (
-            <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
-              {saveMutation.isPending ? "Saving..." : "Save Settings"}
-            </Button>
+            <div className="mt-6">
+              <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} size="lg">
+                {saveMutation.isPending ? "Saving..." : "Save All Settings"}
+              </Button>
+            </div>
           )}
-        </div>
+        </Tabs>
       </div>
     </div>
   );
