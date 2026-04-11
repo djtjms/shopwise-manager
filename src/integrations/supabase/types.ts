@@ -172,9 +172,11 @@ export type Database = {
       products: {
         Row: {
           barcode: string | null
+          batch_number: string | null
           category_id: string | null
           created_at: string
           description: string | null
+          drug_license_no: string | null
           expiry_date: string | null
           generic_name: string | null
           id: string
@@ -192,9 +194,11 @@ export type Database = {
         }
         Insert: {
           barcode?: string | null
+          batch_number?: string | null
           category_id?: string | null
           created_at?: string
           description?: string | null
+          drug_license_no?: string | null
           expiry_date?: string | null
           generic_name?: string | null
           id?: string
@@ -212,9 +216,11 @@ export type Database = {
         }
         Update: {
           barcode?: string | null
+          batch_number?: string | null
           category_id?: string | null
           created_at?: string
           description?: string | null
+          drug_license_no?: string | null
           expiry_date?: string | null
           generic_name?: string | null
           id?: string
